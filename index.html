@@ -2004,3 +2004,98 @@
     </script>
 </body>
 </html>
+<div style="font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+  <h3>ระบบจัดการข้อมูลแดชบอร์ด (เรียลไทม์)</h3>
+
+  <!-- ฟอร์มสำหรับกรอกข้อมูลเพิ่ม -->
+  <form id="dataForm" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+    <input type="text" id="nameInput" placeholder="ชื่อรายการ / ข้อมูล" required style="padding: 8px; flex: 1;">
+    <input type="text" id="statusInput" placeholder="สถานะ (เช่น รอดำเนินการ)" required style="padding: 8px; flex: 1;">
+    <input type="text" id="updateByInput" placeholder="ผู้บันทึก" required style="padding: 8px; width: 120px;">
+    <button type="submit" id="submitBtn" style="padding: 8px 16px; background: #0066cc; color: #white; border: none; cursor: pointer; border-radius: 4px;">บันทึกข้อมูล</button>
+  </form>
+
+  <!-- พื้นที่แสดงตารางข้อมูล -->
+  <div id="loadingStatus" style="color: #666; font-style: italic;">กำลังโหลดข้อมูล...</div>
+  <table id="dataTable" border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px; display: none;">
+    <thead>
+      <tr style="background: #f4f4f4;">
+        <th style="padding: 8px; text-align: left;">ID</th>
+        <th style="padding: 8px; text-align: left;">Name</th>
+        <th style="padding: 8px; text-align: left;">Status</th>
+        <th style="padding: 8px; text-align: left;">UpdateBy</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <!-- ข้อมูลจะถูกดึงมาแสดงตรงนี้อัตโนมัติ -->
+    </tbody>
+  </table>
+</div>
+
+<script>
+  // 📌 นำ Web App URL ที่ได้จาก Google Apps Script มาวางแทนที่ข้อความข้างล่างนี้
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw7ue2etUYILgwAl9OGvQzXYCNijUN_WODGn-fR2iARwG8Bw09iPYv4D7G32Zr3ETUTDg/exec";
+
+  async function loadData() {
+    try {
+      let response = await fetch(WEB_APP_URL + "?action=getData");
+      let result = await response.json();
+      
+      let tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+      
+      result.forEach(row => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="padding: 8px; border: 1px solid #ddd;">${row.ID || ''}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${row.Name || ''}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${row.Status || ''}</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${row.UpdateBy || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("loadingStatus").style.display = "none";
+      document.getElementById("dataTable").style.display = "table";
+    } catch (error) {
+      console.error("Error loading data:", error);
+      document.getElementById("loadingStatus").innerText = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+    }
+  }
+
+  // ส่งข้อมูลเมื่อกดปุ่มบันทึกจากหน้าเว็บ
+  document.getElementById("dataForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    let btn = document.getElementById("submitBtn");
+    btn.innerText = "กำลังบันทึก...";
+    btn.disabled = true;
+
+    let payload = {
+      name: document.getElementById("nameInput").value,
+      status: document.getElementById("statusInput").value,
+      updateBy: document.getElementById("updateByInput").value
+    };
+
+    try {
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      // ล้างช่องกรอกและโหลดข้อมูลใหม่ทันที
+      document.getElementById("dataForm").reset();
+      loadData();
+    } catch (error) {
+      alert("บันทึกไม่สำเร็จ: " + error);
+    } finally {
+      btn.innerText = "บันทึกข้อมูล";
+      btn.disabled = false;
+    }
+  });
+
+  // โหลดข้อมูลทันทีเมื่อเปิดหน้าเว็บ
+  loadData();
+
+  // 🔄 ตั้งเวลาให้ดึงข้อมูลใหม่ทุกๆ 5 วินาที เพื่อให้ทีมงานคนอื่นเพิ่มข้อมูลแล้วหน้าจอเราอัปเดตตามอัตโนมัติ
+  setInterval(loadData, 5000);
+</script>
